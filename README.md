@@ -1,4 +1,4 @@
-# food_safe
+# ReadSprint
 
 A new Flutter project.
 
