@@ -1,0 +1,32 @@
+name: food_safe
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  cupertino_icons: ^1.0.8
+  flutter:
+    sdk: flutter
+  flutter_native_splash: ^2.4.6
+  gpt_markdown: ^1.1.4
+  shared_preferences: ^2.5.3
+
+dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
+  flutter_lints: ^5.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/images/onboarding/
+    - assets/policies/
+
+flutter_launcher_icons:
+  ios: true
+  image_path: "assets/splash_02.png"
