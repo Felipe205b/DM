@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../services/shared_preferences_services.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../../services/shared_preferences_services.dart';
 import '../sprints/sprint.dart';
 import '../sprints/sprint_card.dart';
 import '../sprints/sprint_details_page.dart';
+import '../onboarding/onboarding_page.dart';
+import '../profile/profile_page.dart';
 
 class HomePage extends StatefulWidget {
   static const routeName = '/home';
@@ -17,6 +26,36 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final List<Sprint> _sprints = [];
+  String? _userName;
+  String? _userEmail;
+  String? _profileImagePath;
+  Uint8List? _profileImageBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final name = await SharedPreferencesService.getUserName();
+    final email = await SharedPreferencesService.getUserEmail();
+    if (kIsWeb) {
+      final base64 = await SharedPreferencesService.getProfileImageBase64();
+      setState(() {
+        _profileImageBytes = base64 != null ? base64Decode(base64) : null;
+      });
+    } else {
+      final imagePath = await SharedPreferencesService.getProfileImagePath();
+      setState(() {
+        _profileImagePath = imagePath;
+      });
+    }
+    setState(() {
+      _userName = name;
+      _userEmail = email;
+    });
+  }
 
   void _showCreateSprintDialog() {
     final titleController = TextEditingController();
@@ -79,34 +118,77 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _revokeConsents() async {
-    final confirm = await showDialog<bool>(
+  void _showPrivacyDialog() {
+    bool deletePersonalData = false;
+    showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Revogar Consentimentos'),
-        content: const Text(
-          'Tem certeza que deseja revogar todos os consentimentos e voltar para a tela de boas-vindas?',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Privacidade & Consentimentos'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Revogar consentimento para marketing (sempre revogado).',
+              ),
+              const SizedBox(height: 16),
+              CheckboxListTile(
+                title: const Text('Apagar dados pessoais (nome e e-mail)'),
+                value: deletePersonalData,
+                onChanged: (value) {
+                  setState(() {
+                    deletePersonalData = value ?? false;
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Sempre revogar marketing
+                await SharedPreferencesService.setMarketingConsent(false);
+                String message = 'Consentimento de marketing revogado.';
+                if (deletePersonalData) {
+                  await SharedPreferencesService.removeUserName();
+                  await SharedPreferencesService.removeUserEmail();
+                  message += ' Dados pessoais apagados.';
+                  // Navegar para Onboarding após apagar dados
+                  Navigator.of(context).pop(); // fechar diálogo
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => const OnboardingPage(),
+                    ),
+                  );
+                  return;
+                }
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(message)));
+                // Recarregar dados se não navegou
+                _loadUserData();
+              },
+              child: const Text('Confirmar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Revogar'),
-          ),
-        ],
       ),
     );
+  }
 
-    if (confirm != true) return;
-
-    await SharedPreferencesService.removeAll();
-
-    if (!mounted) return;
-
-    Navigator.of(context).pushReplacementNamed('/onboarding');
+  Future<void> _logout() async {
+    await SharedPreferencesService.setOnboardingDone(false);
+    await SharedPreferencesService.removeUserName();
+    await SharedPreferencesService.removeUserEmail();
+    await SharedPreferencesService.setMarketingConsent(false);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const OnboardingPage()),
+    );
   }
 
   @override
@@ -114,6 +196,54 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('ReadSprint'),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: Text(_userName ?? 'Nome não definido'),
+              accountEmail: Text(_userEmail ?? 'E-mail não definido'),
+              currentAccountPicture: CircleAvatar(
+                backgroundImage: kIsWeb
+                    ? (_profileImageBytes != null
+                        ? MemoryImage(_profileImageBytes!)
+                        : null)
+                    : (_profileImagePath != null
+                        ? FileImage(File(_profileImagePath!))
+                        : null),
+                child: (_profileImagePath == null && _profileImageBytes == null)
+                    ? const Icon(Icons.person, size: 50)
+                    : null,
+              ),
+              decoration: const BoxDecoration(color: Color(0xFF6A0DAD)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Editar Perfil'),
+              onTap: () {
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(builder: (context) => const ProfilePage()),
+                    )
+                    .then((_) => _loadUserData());
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip),
+              title: const Text('Privacidade & Consentimentos'),
+              onTap: _showPrivacyDialog,
+            ),
+            ListTile(
+              leading: const Icon(Icons.exit_to_app),
+              title: const Text('Sair'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _logout();
+              },
+            ),
+          ],
+        ),
       ),
       body: _sprints.isEmpty
           ? Center(
@@ -166,11 +296,6 @@ class _HomePageState extends State<HomePage> {
                 }
               },
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _revokeConsents,
-        label: const Text('Revogar Consentimento'),
-        icon: const Icon(Icons.delete),
-      ),
     );
   }
 }

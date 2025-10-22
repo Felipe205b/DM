@@ -68,6 +68,90 @@ class SharedPreferencesService {
         false;
   }
 
+  static Future<void> setUserName(String name) async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    await _instance!._prefs.setString(PreferencesKeys.userName, name);
+  }
+
+  static Future<String?> getUserName() async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    return _instance!._prefs.getString(PreferencesKeys.userName);
+  }
+
+  static Future<void> removeUserName() async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    await _instance!._prefs.remove(PreferencesKeys.userName);
+  }
+
+  static Future<void> setUserEmail(String email) async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    await _instance!._prefs.setString(PreferencesKeys.userEmail, email);
+  }
+
+  static Future<String?> getUserEmail() async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    return _instance!._prefs.getString(PreferencesKeys.userEmail);
+  }
+
+  static Future<void> removeUserEmail() async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    await _instance!._prefs.remove(PreferencesKeys.userEmail);
+  }
+
+  static Future<void> setOnboardingDone(bool done) async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    await _instance!._prefs.setBool(PreferencesKeys.onboardingCompleted, done);
+  }
+
+  static Future<bool> getOnboardingDone() async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    return _instance!._prefs.getBool(PreferencesKeys.onboardingCompleted) ?? false;
+  }
+
+  static Future<void> setProfileImagePath(String path) async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    await _instance!._prefs.setString(PreferencesKeys.profileImagePath, path);
+  }
+
+  static Future<String?> getProfileImagePath() async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    return _instance!._prefs.getString(PreferencesKeys.profileImagePath);
+  }
+
+  static Future<void> setProfileImageBase64(String base64) async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    await _instance!._prefs.setString(PreferencesKeys.profileImageBase64, base64);
+  }
+
+  static Future<String?> getProfileImageBase64() async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    return _instance!._prefs.getString(PreferencesKeys.profileImageBase64);
+  }
+
   static Future<void> removeAll() async {
     if (_instance == null) {
       await getInstance();
