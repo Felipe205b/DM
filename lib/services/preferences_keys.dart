@@ -5,4 +5,8 @@ class PreferencesKeys {
   static const String lastPolicyReadTimestamp = 'last_policy_read_timestamp';
   static const String privacyPolicyAllRead = 'privacy_policy_all_read';
   static const String termsOfUseAllRead = 'terms_of_use_all_read';
+  static const String userName = 'user_name';
+  static const String userEmail = 'user_email';
+  static const String profileImagePath = 'profile_image_path';
+  static const String profileImageBase64 = 'profile_image_base64';
 }
