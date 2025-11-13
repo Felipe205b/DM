@@ -1,4 +1,4 @@
-# readsprint
+# ReadSprint
 
 Um aplicativo de leitura que divide livros em metas menores, desenvolvido em Flutter por Felipe Sousa da Costa.
 
