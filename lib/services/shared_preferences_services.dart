@@ -1,5 +1,6 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../features/models/book.dart';
 import 'preferences_keys.dart';
 
 class SharedPreferencesService {
@@ -68,6 +69,13 @@ class SharedPreferencesService {
         false;
   }
 
+  static Future<void> removeAll() async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    await _instance!._prefs.clear();
+  }
+
   static Future<void> setUserName(String name) async {
     if (_instance == null) {
       await getInstance();
@@ -80,13 +88,6 @@ class SharedPreferencesService {
       await getInstance();
     }
     return _instance!._prefs.getString(PreferencesKeys.userName);
-  }
-
-  static Future<void> removeUserName() async {
-    if (_instance == null) {
-      await getInstance();
-    }
-    await _instance!._prefs.remove(PreferencesKeys.userName);
   }
 
   static Future<void> setUserEmail(String email) async {
@@ -103,27 +104,6 @@ class SharedPreferencesService {
     return _instance!._prefs.getString(PreferencesKeys.userEmail);
   }
 
-  static Future<void> removeUserEmail() async {
-    if (_instance == null) {
-      await getInstance();
-    }
-    await _instance!._prefs.remove(PreferencesKeys.userEmail);
-  }
-
-  static Future<void> setOnboardingDone(bool done) async {
-    if (_instance == null) {
-      await getInstance();
-    }
-    await _instance!._prefs.setBool(PreferencesKeys.onboardingCompleted, done);
-  }
-
-  static Future<bool> getOnboardingDone() async {
-    if (_instance == null) {
-      await getInstance();
-    }
-    return _instance!._prefs.getBool(PreferencesKeys.onboardingCompleted) ?? false;
-  }
-
   static Future<void> setProfileImagePath(String path) async {
     if (_instance == null) {
       await getInstance();
@@ -138,24 +118,37 @@ class SharedPreferencesService {
     return _instance!._prefs.getString(PreferencesKeys.profileImagePath);
   }
 
-  static Future<void> setProfileImageBase64(String base64) async {
+  static Future<void> saveBooks(List<Book> books) async {
     if (_instance == null) {
       await getInstance();
     }
-    await _instance!._prefs.setString(PreferencesKeys.profileImageBase64, base64);
+    final booksMap = books.map((book) => book.toMap()).toList();
+    await _instance!._prefs.setString(PreferencesKeys.books, jsonEncode(booksMap));
   }
 
-  static Future<String?> getProfileImageBase64() async {
+  static Future<List<Book>> getBooks() async {
     if (_instance == null) {
       await getInstance();
     }
-    return _instance!._prefs.getString(PreferencesKeys.profileImageBase64);
+    final booksString = _instance!._prefs.getString(PreferencesKeys.books);
+    if (booksString == null) {
+      return [];
+    }
+    final booksMap = jsonDecode(booksString) as List;
+    return booksMap.map((map) => Book.fromMap(map)).toList();
   }
 
-  static Future<void> removeAll() async {
+  static Future<void> setTutorialStep(int step) async {
     if (_instance == null) {
       await getInstance();
     }
-    await _instance!._prefs.clear();
+    await _instance!._prefs.setInt(PreferencesKeys.tutorialStep, step);
+  }
+
+  static Future<int> getTutorialStep() async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    return _instance!._prefs.getInt(PreferencesKeys.tutorialStep) ?? 1;
   }
 }
