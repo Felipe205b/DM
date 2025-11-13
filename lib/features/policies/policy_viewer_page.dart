@@ -19,6 +19,7 @@ class PolicyViewerPage extends StatefulWidget {
 class _PolicyViewerPageState extends State<PolicyViewerPage> {
   final ScrollController _scrollController = ScrollController();
   String _policyContentFromMarkdown = '';
+  // ignore: unused_field
   double _scrollPosition = 0.0;
   bool _reachedEndOfDocument = false;
 
@@ -106,24 +107,32 @@ class _PolicyViewerPageState extends State<PolicyViewerPage> {
                     ),
                   ),
           ),
-          SafeArea(
-            child: Semantics(
-              button: true,
-              enabled: _reachedEndOfDocument,
-              label: _reachedEndOfDocument
-                  ? 'Você chegou ao final do documento'
-                  : 'Role até o final para habilitar',
-              child: FilledButton.icon(
-                onPressed: _reachedEndOfDocument
-                    ? () {
-                        Navigator.of(context).pop(true);
-                      }
-                    : null,
-                icon: const Icon(Icons.check),
-                label: Text(
-                  widget.policyTitle == 'Política de Privacidade'
-                      ? 'aceitar politica de privacidade'
-                      : 'Concordo com os termos',
+          Padding(
+            padding: const EdgeInsets.only(bottom: 32.0),
+            child: SafeArea(
+              child: Semantics(
+                button: true,
+                enabled: _reachedEndOfDocument,
+                label: _reachedEndOfDocument
+                    ? 'Você chegou ao final do documento'
+                    : 'Role até o final para habilitar',
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: _reachedEndOfDocument
+                          ? () {
+                              Navigator.of(context).pop(true);
+                            }
+                          : null,
+                      icon: const Icon(Icons.check),
+                      label: Text(
+                        widget.policyTitle == 'Política de Privacidade'
+                            ? 'aceitar politica de privacidade'
+                            : 'Concordo com os termos',
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

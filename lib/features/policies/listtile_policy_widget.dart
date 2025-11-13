@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/shared_preferences_services.dart';
 import 'policy_viewer_page.dart';
 
-class ListtilePolicyWidget extends StatelessWidget {
+class ListtilePolicyWidget extends StatefulWidget {
   final bool isPrivacyPolicyRead;
   final String assetPath;
   final String policyTitle;
@@ -18,49 +18,49 @@ class ListtilePolicyWidget extends StatelessWidget {
   });
 
   @override
+  State<ListtilePolicyWidget> createState() => _ListtilePolicyWidgetState();
+}
+
+class _ListtilePolicyWidgetState extends State<ListtilePolicyWidget> {
+  @override
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(
-        isPrivacyPolicyRead ? Icons.check_circle : Icons.cancel,
-        color: isPrivacyPolicyRead ? Colors.green : Colors.red,
+        widget.isPrivacyPolicyRead ? Icons.check_circle : Icons.cancel,
+        color: widget.isPrivacyPolicyRead ? Colors.green : Colors.red,
       ),
-      title: Text(policyTitle),
+      title: Text(widget.policyTitle),
       trailing: TextButton(
-        onPressed: isPrivacyPolicyRead
+        onPressed: widget.isPrivacyPolicyRead
             ? null
-            : () {
-                Navigator.of(context)
-                    .push(
-                      MaterialPageRoute(
-                        builder: (context) {
-                          return PolicyViewerPage(
-                            policyTitle: policyTitle,
-                            assetPath: assetPath,
-                          );
-                        },
-                      ),
-                    )
-                    .then((value) {
-                      bool didRead = value ?? false;
+            : () async {
+                final value = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) {
+                      return PolicyViewerPage(
+                        policyTitle: widget.policyTitle,
+                        assetPath: widget.assetPath,
+                      );
+                    },
+                  ),
+                );
+                bool didRead = value ?? false;
 
-                      SharedPreferencesService.setPrivacyPolicyAllRead(didRead);
-                      if (didRead) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Obrigado por aceitar a $policyTitle',
-                                ),
-                              ),
-                            )
-                            .closed
-                            .then((_) {
-                              onPolicyRead();
-                            });
-                      }
-                    });
+                await SharedPreferencesService.setPrivacyPolicyAllRead(didRead);
+                if (didRead) {
+                  widget.onPolicyRead();
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Obrigado por aceitar a ${widget.policyTitle}',
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
               },
-        child: Text(isPrivacyPolicyRead ? 'Lido' : 'Ler'),
+        child: Text(widget.isPrivacyPolicyRead ? 'Lido' : 'Ler'),
       ),
     );
   }

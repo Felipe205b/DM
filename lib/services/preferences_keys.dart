@@ -8,5 +8,6 @@ class PreferencesKeys {
   static const String userName = 'user_name';
   static const String userEmail = 'user_email';
   static const String profileImagePath = 'profile_image_path';
-  static const String profileImageBase64 = 'profile_image_base64';
+  static const String books = 'books';
+  static const String tutorialStep = 'tutorial_step';
 }
