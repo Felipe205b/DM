@@ -55,13 +55,24 @@ class _SprintDetailsPageState extends ConsumerState<SprintDetailsPage> {
   @override
   void initState() {
     super.initState();
+    ShowcaseView.register(
+      onComplete: (index, key) {
+        SharedPreferencesService.setTutorialStep(0);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    ShowcaseView.get().unregister();
+    super.dispose();
   }
 
   void _checkAndShowTutorial(BuildContext context) {
     SharedPreferencesService.getTutorialStep().then((tutorialStep) {
       if (tutorialStep == 4) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          ShowCaseWidget.of(context).startShowCase(
+          ShowcaseView.get().startShowCase(
             [_progressKey, _dailyGoalKey, _editKey, _deleteKey],
           );
         });
@@ -161,114 +172,107 @@ class _SprintDetailsPageState extends ConsumerState<SprintDetailsPage> {
           );
         }
 
-        return ShowCaseWidget(
-          onFinish: () {
-            SharedPreferencesService.setTutorialStep(0);
-          },
-          builder: (context) {
-            return Scaffold(
-              appBar: AppBar(
-                title: Text(sprint.title),
-              ),
-              body: Builder(
-                builder: (context) {
-                  if (!_isTutorialInitiated) {
-                    _isTutorialInitiated = true;
-                    _checkAndShowTutorial(context);
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(sprint.title),
+          ),
+          body: Builder(
+            builder: (context) {
+              if (!_isTutorialInitiated) {
+                _isTutorialInitiated = true;
+                _checkAndShowTutorial(context);
+              }
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Showcase(
+                      key: _progressKey,
+                      description:
+                          'Aqui você pode acompanhar o progresso do seu sprint',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Progresso: ${(sprint.progress * 100).toStringAsFixed(0)}% - Restam ${sprint.remainingDays} dias',
+                          ),
+                          const SizedBox(height: 8.0),
+                          LinearProgressIndicator(
+                            value: sprint.progress,
+                            minHeight: 10,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16.0),
+                    Showcase(
+                      key: _dailyGoalKey,
+                      description:
+                          'Marque aqui as metas diárias que você já concluiu',
+                      child: Text(
+                        'Metas Diárias:',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: sprint.durationInDays,
+                        itemBuilder: (context, index) {
+                          final pagesForDay = sprint.getPagesForDay(index);
+                          final isEnabled = (index == sprint.daysRead) || (index == sprint.daysRead - 1 && index < sprint.daysRead);
+
+                          return CheckboxListTile(
+                            title: Text(
+                                'Dia ${index + 1}: Ler $pagesForDay páginas'),
+                            value: index < sprint.daysRead,
+                            onChanged: isEnabled
+                                ? (bool? value) {
+                                    if (value != null) {
+                                      sprintNotifier.updateSprintProgress(index, value);
+                                    }
+                                  }
+                                : null,
+                          );
+                        },
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         Showcase(
-                          key: _progressKey,
+                          key: _editKey,
                           description:
-                              'Aqui você pode acompanhar o progresso do seu sprint',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Progresso: ${(sprint.progress * 100).toStringAsFixed(0)}% - Restam ${sprint.remainingDays} dias',
-                              ),
-                              const SizedBox(height: 8.0),
-                              LinearProgressIndicator(
-                                value: sprint.progress,
-                                minHeight: 10,
-                              ),
-                            ],
+                              'Clique aqui para editar as metas do seu sprint',
+                          child: ElevatedButton(
+                            onPressed: () => _showEditSprintDialog(sprint, readingProgress),
+                            child: const Text('Editar metas'),
                           ),
                         ),
-                        const SizedBox(height: 16.0),
                         Showcase(
-                          key: _dailyGoalKey,
+                          key: _deleteKey,
                           description:
-                              'Marque aqui as metas diárias que você já concluiu',
-                          child: Text(
-                            'Metas Diárias:',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: sprint.durationInDays,
-                            itemBuilder: (context, index) {
-                              final pagesForDay = sprint.getPagesForDay(index);
-                              final isEnabled = (index == sprint.daysRead) || (index == sprint.daysRead - 1 && index < sprint.daysRead);
-
-                              return CheckboxListTile(
-                                title: Text(
-                                    'Dia ${index + 1}: Ler $pagesForDay páginas'),
-                                value: index < sprint.daysRead,
-                                onChanged: isEnabled
-                                    ? (bool? value) {
-                                        if (value != null) {
-                                          sprintNotifier.updateSprintProgress(index, value);
-                                        }
-                                      }
-                                    : null,
-                              );
+                              'Clique aqui para deletar o seu sprint',
+                          child: ElevatedButton(
+                            onPressed: () {
+                              ref
+                                  .read(homeProvider)
+                                  .deleteBook(widget.book);
+                              Navigator.of(context).pop();
                             },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                            ),
+                            child: const Text('Deletar sprint'),
                           ),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Showcase(
-                              key: _editKey,
-                              description:
-                                  'Clique aqui para editar as metas do seu sprint',
-                              child: ElevatedButton(
-                                onPressed: () => _showEditSprintDialog(sprint, readingProgress),
-                                child: const Text('Editar metas'),
-                              ),
-                            ),
-                            Showcase(
-                              key: _deleteKey,
-                              description:
-                                  'Clique aqui para deletar o seu sprint',
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  ref
-                                      .read(homeProvider)
-                                      .deleteBook(widget.book);
-                                  Navigator.of(context).pop();
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                ),
-                                child: const Text('Deletar sprint'),
-                              ),
-                            ),
-                          ],
                         ),
                       ],
                     ),
-                  );
-                },
-              ),
-            );
-          },
+                  ],
+                ),
+              );
+            },
+          ),
         );
       },
     );

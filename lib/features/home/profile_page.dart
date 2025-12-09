@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/shared_preferences_services.dart';
-import 'dart:typed_data';
 
 class ProfilePage extends StatefulWidget {
   static const routeName = '/profile';

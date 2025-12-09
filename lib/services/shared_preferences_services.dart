@@ -180,4 +180,18 @@ class SharedPreferencesService {
     }
     await _instance!._prefs.remove('queue');
   }
+
+  static Future<void> setThemeMode(String mode) async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    await _instance!._prefs.setString(PreferencesKeys.themeMode, mode);
+  }
+
+  static Future<String> getThemeMode() async {
+    if (_instance == null) {
+      await getInstance();
+    }
+    return _instance!._prefs.getString(PreferencesKeys.themeMode) ?? 'system';
+  }
 }

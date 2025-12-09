@@ -10,4 +10,5 @@ class PreferencesKeys {
   static const String profileImagePath = 'profile_image_path';
   static const String books = 'books';
   static const String tutorialStep = 'tutorial_step';
+  static const String themeMode = 'theme_mode';
 }

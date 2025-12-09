@@ -34,7 +34,9 @@ class _ListtilePolicyWidgetState extends State<ListtilePolicyWidget> {
         onPressed: widget.isPrivacyPolicyRead
             ? null
             : () async {
-                final value = await Navigator.of(context).push(
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                final value = await navigator.push(
                   MaterialPageRoute(
                     builder: (context) {
                       return PolicyViewerPage(
@@ -50,7 +52,7 @@ class _ListtilePolicyWidgetState extends State<ListtilePolicyWidget> {
                 if (didRead) {
                   widget.onPolicyRead();
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text(
                         'Obrigado por aceitar a ${widget.policyTitle}',

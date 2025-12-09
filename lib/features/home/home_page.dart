@@ -11,13 +11,16 @@ import '../sprints/sprint_details_page.dart';
 import 'home_provider.dart';
 import '../sprints/sprint.dart';
 import 'package:showcaseview/showcaseview.dart';
-import '../../services/shared_preferences_services.dart';
 import 'package:uuid/uuid.dart';
+import '../app/theme_controller.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   static const routeName = '/home';
 
-  const HomePage({super.key, required this.title});
+  const HomePage({
+    super.key,
+    required this.title,
+  });
 
   final String title;
 
@@ -29,7 +32,8 @@ class _CreateSprintDialog extends ConsumerStatefulWidget {
   const _CreateSprintDialog();
 
   @override
-  ConsumerState<_CreateSprintDialog> createState() => __CreateSprintDialogState();
+  ConsumerState<_CreateSprintDialog> createState() =>
+      __CreateSprintDialogState();
 }
 
 class __CreateSprintDialogState extends ConsumerState<_CreateSprintDialog> {
@@ -52,7 +56,7 @@ class __CreateSprintDialogState extends ConsumerState<_CreateSprintDialog> {
     SharedPreferencesService.getTutorialStep().then((tutorialStep) {
       if (tutorialStep == 2) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          ShowCaseWidget.of(context).startShowCase(
+          ShowcaseView.get().startShowCase(
             [_titleKey, _pagesKey, _durationKey, _createKey],
           );
         });
@@ -80,7 +84,8 @@ class __CreateSprintDialogState extends ConsumerState<_CreateSprintDialog> {
             description: 'Insira o título do material de leitura',
             child: TextField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Título do material'),
+              decoration:
+                  const InputDecoration(labelText: 'Título do material'),
             ),
           ),
           TextField(
@@ -123,17 +128,22 @@ class __CreateSprintDialogState extends ConsumerState<_CreateSprintDialog> {
               final durationInDays =
                   int.tryParse(_durationController.text) ?? 0;
 
-              if (title.isNotEmpty && author.isNotEmpty && totalPages > 0 && durationInDays > 0) {
+              // Capture o navigator e o scaffoldMessenger antes do await
+              final navigator = Navigator.of(context);
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+              if (title.isNotEmpty &&
+                  author.isNotEmpty &&
+                  totalPages > 0 &&
+                  durationInDays > 0) {
                 final user = Supabase.instance.client.auth.currentUser;
                 if (user == null) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Erro: Usuário não autenticado.'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Erro: Usuário não autenticado.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                   return;
                 }
                 try {
@@ -145,19 +155,17 @@ class __CreateSprintDialogState extends ConsumerState<_CreateSprintDialog> {
                     author: author,
                     totalPages: totalPages,
                   );
-                  await ref.read(homeProvider).createSprint(book, durationInDays);
-                  if (mounted) {
-                    Navigator.of(context).pop(true);
-                  }
+                  await ref
+                      .read(homeProvider)
+                      .createSprint(book, durationInDays);
+                  navigator.pop(true);
                 } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Erro ao criar sprint: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Erro ao criar sprint: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                 }
               }
             },
@@ -181,21 +189,31 @@ class _HomePageState extends ConsumerState<HomePage> {
   void initState() {
     super.initState();
     _loadUser();
+    ShowcaseView.register(
+      onComplete: (index, key) {
+        if (key == _novoSprintKey) {
+          SharedPreferencesService.setTutorialStep(2);
+          _showCreateSprintDialog();
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    ShowcaseView.get().unregister();
+    super.dispose();
   }
 
   void _checkAndShowTutorial(BuildContext context) {
     SharedPreferencesService.getTutorialStep().then((tutorialStep) {
       if (tutorialStep == 1) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          ShowCaseWidget.of(context).startShowCase(
-            [_novoSprintKey],
-          );
+          ShowcaseView.get().startShowCase([_novoSprintKey]);
         });
       } else if (tutorialStep == 3) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          ShowCaseWidget.of(context).startShowCase(
-            [_verDetalhesKey],
-          );
+          ShowcaseView.get().startShowCase([_verDetalhesKey]);
         });
       }
     });
@@ -216,13 +234,12 @@ class _HomePageState extends ConsumerState<HomePage> {
   Future<void> _showCreateSprintDialog() async {
     final created = await showDialog<bool>(
       context: context,
-      builder: (context) => ShowCaseWidget(
-        builder: (context) => const _CreateSprintDialog(),
-      ),
+      builder: (context) => const _CreateSprintDialog(),
     );
 
     if (created == true) {
       final tutorialStep = await SharedPreferencesService.getTutorialStep();
+      if (!mounted) return;
       if (tutorialStep == 3) {
         _checkAndShowTutorial(context);
       }
@@ -230,6 +247,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _revokeConsents() async {
+    final navigator = Navigator.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -256,21 +274,19 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     if (!mounted) return;
 
-    Navigator.of(context).pushReplacementNamed('/onboarding');
+    navigator.pushReplacementNamed('/onboarding');
   }
 
   @override
   Widget build(BuildContext context) {
     final booksAsync = ref.watch(booksProvider);
+    final brightness = MediaQuery.platformBrightnessOf(context);
+    final themeMode = ref.watch(themeControllerProvider).value;
 
-    return ShowCaseWidget(
-      onFinish: () async {
-        await SharedPreferencesService.setTutorialStep(2);
-        await _showCreateSprintDialog();
-        _checkAndShowTutorial(context);
-      },
-      builder: (context) {
-        return Scaffold(
+    final isDark = themeMode == ThemeMode.dark ||
+        (themeMode == ThemeMode.system && brightness == Brightness.dark);
+
+    return Scaffold(
           appBar: AppBar(
             title: const Text('ReadSprint'),
           ),
@@ -285,7 +301,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     backgroundImage: _profileImagePath != null
                         ? (kIsWeb
                             ? MemoryImage(base64Decode(_profileImagePath!))
-                            : FileImage(File(_profileImagePath!))) as ImageProvider
+                            : FileImage(File(_profileImagePath!)))
+                                as ImageProvider
                         : null,
                     child: _profileImagePath == null
                         ? Text(
@@ -323,13 +340,29 @@ class _HomePageState extends ConsumerState<HomePage> {
                     _revokeConsents();
                   },
                 ),
+                SwitchListTile(
+                  secondary: Icon(
+                    isDark ? Icons.dark_mode : Icons.light_mode_outlined,
+                  ),
+                  title: const Text('Tema escuro'),
+                  subtitle: Text(
+                    themeMode == ThemeMode.system
+                        ? 'Seguindo o sistema'
+                        : (isDark ? 'Ativado' : 'Desativado'),
+                  ),
+                  value: isDark,
+                  onChanged: (value) {
+                    ref.read(themeControllerProvider.notifier).toggle(brightness);
+                  },
+                ),
               ],
             ),
           ),
           body: Builder(
             builder: (context) {
               return booksAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
                 error: (error, stackTrace) =>
                     Center(child: Text('Erro: $error')),
                 data: (books) {
@@ -365,42 +398,51 @@ class _HomePageState extends ConsumerState<HomePage> {
                               final book = books[index];
                               return Consumer(
                                 builder: (context, ref, child) {
-                                  final readingProgressAsync = ref.watch(readingProgressProvider(book.id));
+                                  final readingProgressAsync = ref.watch(
+                                      readingProgressProvider(book.id));
                                   return readingProgressAsync.when(
-                                    loading: () => const Center(child: CircularProgressIndicator()),
-                                    error: (error, stack) => Center(child: Text('Erro: $error')),
+                                    loading: () => const Center(
+                                        child: CircularProgressIndicator()),
+                                    error: (error, stack) =>
+                                        Center(child: Text('Erro: $error')),
                                     data: (readingProgress) {
                                       if (readingProgress == null) {
                                         return const ListTile(
-                                          title: Text('Erro ao carregar progresso'),
+                                          title: Text(
+                                              'Erro ao carregar progresso'),
                                         );
                                       }
                                       final sprint = Sprint(
                                         title: book.title,
                                         totalPages: book.totalPages,
-                                        durationInDays: readingProgress.durationInDays,
+                                        durationInDays:
+                                            readingProgress.durationInDays,
                                         pagesRead: readingProgress.pagesRead,
                                         daysRead: readingProgress.daysRead,
                                       );
                                       return SprintCard(
                                         sprint: sprint,
-                                        showcaseKey: index == 0 ? _verDetalhesKey : null,
+                                        showcaseKey: index == 0
+                                            ? _verDetalhesKey
+                                            : null,
                                         onViewDetails: () async {
+                                          final navigator = Navigator.of(context);
                                           final tutorialStep =
-                                              await SharedPreferencesService.getTutorialStep();
+                                              await SharedPreferencesService
+                                                  .getTutorialStep();
                                           if (tutorialStep == 3) {
-                                            await SharedPreferencesService.setTutorialStep(4);
+                                            await SharedPreferencesService
+                                                .setTutorialStep(4);
                                           }
-                                          if (mounted) {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => SprintDetailsPage(
-                                                  book: book,
-                                                ),
+                                          if (!mounted) return;
+                                          navigator.push(
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  SprintDetailsPage(
+                                                book: book,
                                               ),
-                                            );
-                                          }
+                                            ),
+                                          );
                                         },
                                       );
                                     },
@@ -431,7 +473,5 @@ class _HomePageState extends ConsumerState<HomePage> {
             },
           ),
         );
-      },
-    );
   }
 }

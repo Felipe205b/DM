@@ -38,19 +38,19 @@ class HomeProvider with ChangeNotifier {
   Future<void> createSprint(Book book, int durationInDays) async {
     final dataService = _ref.read(dataServiceProvider);
     await dataService.createSprint(book, durationInDays);
-    _ref.refresh(booksProvider);
+    _ref.invalidate(booksProvider);
   }
 
   Future<void> deleteBook(Book book) async {
     final dataService = _ref.read(dataServiceProvider);
     await dataService.deleteBook(book);
-    _ref.refresh(booksProvider);
+    _ref.invalidate(booksProvider);
   }
 
   Future<void> updateBook(Book book) async {
     final dataService = _ref.read(dataServiceProvider);
     await dataService.updateBook(book);
-    _ref.refresh(booksProvider);
+    _ref.invalidate(booksProvider);
   }
 
   Future<void> updateReadingProgress(ReadingProgress readingProgress) async {

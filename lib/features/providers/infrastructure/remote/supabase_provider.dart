@@ -62,20 +62,12 @@ class SupabaseProvider {
   Future<List<BookDto>> getAllBooks() async {
     try {
       final data = await client.from('books').select();
-
-      if (data is! List) {
-        return [];
-      }
-
-      final List<BookDto> books = [];
-      for (final item in data) {
-        if (item is Map<String, dynamic>) {
-          books.add(BookDto.fromMap(item));
-        }
-      }
+      final List<BookDto> books =
+          (data as List).map((item) => BookDto.fromMap(item)).toList();
       return books;
     } catch (e) {
-      print('Error fetching books: $e');
+      // Em um aplicativo de produção, você usaria um serviço de logging aqui.
+      // Por exemplo: logger.e('Error fetching books', error: e);
       return [];
     }
   }

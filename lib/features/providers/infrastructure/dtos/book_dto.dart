@@ -1,5 +1,3 @@
-import '../../../models/book.dart';
-
 class BookDto {
   final String id;
   final String userId;

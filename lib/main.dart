@@ -7,23 +7,24 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'features/home/home_provider.dart';
 import 'services/data_service.dart';
+import 'services/shared_preferences_services.dart';
 import 'services/supabase_service.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Carrega as variáveis de ambiente
-  await dotenv.load(fileName: ".env");
-  await SupabaseService.initialize();
-
   DataService? dataService;
   bool initSuccess = false;
+  String? errorMessage; // Variável para armazenar a mensagem de erro
 
   try {
-    // Garante que o usuário anônimo esteja logado
+    // Carrega as variáveis de ambiente e inicializa serviços
+    await dotenv.load(fileName: ".env");
+    await SupabaseService.initialize();
+    await SharedPreferencesService.getInstance();
+
     final supabase = Supabase.instance.client;
-    // Espera o primeiro evento de autenticação para garantir que a sessão foi carregada
     await supabase.auth.onAuthStateChange.first;
 
     if (supabase.auth.currentUser == null) {
@@ -31,43 +32,46 @@ void main() async {
     }
 
     final supabaseInstance = SupabaseService();
+    final currentUser = supabase.auth.currentUser;
 
-    // Garante que o usuário exista na tabela 'users'
-    if (supabase.auth.currentUser != null) {
-      await supabaseInstance.upsertUser(supabase.auth.currentUser!);
+    // Garante que o usuário exista na tabela 'users'. A opção ignoreDuplicates agora lida com o conflito.
+    if (currentUser != null) {
+      await supabaseInstance.upsertUser(currentUser);
     }
 
     dataService = await DataService.getInstance(supabaseInstance);
     await dataService.syncQueue();
+
     initSuccess = true;
   } catch (e) {
-    // Lidar com o erro de inicialização, se necessário
-    print('Erro durante a inicialização: $e');
+    debugPrint('Erro durante a inicialização: $e');
+    errorMessage = e.toString(); // Captura o erro específico
     initSuccess = false;
   } finally {
-    // Remove a tela de splash
     FlutterNativeSplash.remove();
   }
 
   if (initSuccess && dataService != null) {
-    // Executa o aplicativo com o serviço inicializado
     runApp(
       ProviderScope(
         overrides: [
-          dataServiceProvider.overrideWithValue(dataService!),
+          dataServiceProvider.overrideWithValue(dataService),
         ],
         child: const ReadSprintApp(),
       ),
     );
   } else {
-    // Exibe uma tela de erro se a inicialização falhar
+    // Exibe a tela de erro com a mensagem específica, conforme solicitado.
     runApp(
-      const MaterialApp(
+      MaterialApp(
         home: Scaffold(
           body: Center(
-            child: Text(
-              'Erro na inicialização. Por favor, reinicie o aplicativo.',
-              textAlign: TextAlign.center,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Erro na inicialização:\n\n$errorMessage\n\nPor favor, reinicie o aplicativo.',
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
         ),

@@ -14,13 +14,19 @@ class SupabaseService {
   Future<void> upsertUser(User user) async {
     try {
       final client = Supabase.instance.client;
+
+      // Para usuários anônimos ou com email vazio, geramos um email falso e único
+      // usando o ID do usuário para satisfazer a restrição UNIQUE da coluna 'email'.
+      final userEmail = (user.email == null || user.email!.isEmpty)
+          ? '${user.id}@anon.readsprint.app'
+          : user.email!;
+
       await client.from('users').upsert({
         'id': user.id,
-        'email': user.email ?? '', // Provide a default value for email if it's null
-        'name': '', // Provide a default empty string for name
-      });
+        'email': userEmail,
+        'name': '',
+      }, onConflict: 'id'); // Usar onConflict no ID ainda é uma boa prática.
     } catch (e) {
-      // It's better to let the caller handle the exception
       throw Exception('Failed to upsert user: $e');
     }
   }
